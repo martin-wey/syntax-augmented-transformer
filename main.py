@@ -16,7 +16,6 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained('microsoft/codebert-base')
 
 
-
 if __name__ == '__main__':
     random.seed(42)
     np.random.seed(42)
