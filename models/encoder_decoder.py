@@ -58,14 +58,11 @@ class TransformerEncoder(nn.Module):
         return tgt_embds.permute(1, 0, 2)
 
     def forward(self, src: Tensor, src_mask: Tensor, src_key_padding_mask: Tensor) -> Tensor:
-        if src_mask is None:
-            src_mask, _ = create_mask(src, None)
         src = self.embedding(src) * math.sqrt(self.d_model)
         src = self.positional_embedding(src)
         # permute batch_size and seq_len
         src = src.permute(1, 0, 2)
         output = self.encoder(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)
-        output = output.permute(1, 0, 2)
         return output
 
 
@@ -87,8 +84,6 @@ class TransformerDecoder(nn.Module):
         self.d_model = hidden_dim
 
     def forward(self, tgt, memory, tgt_mask, tgt_key_padding_mask, memory_key_padding_mask):
-        if tgt_mask is None:
-            _, tgt_mask = create_mask(None, tgt)
         return self.transformer_decoder(tgt=tgt,
                                         memory=memory,
                                         tgt_mask=tgt_mask,

@@ -41,8 +41,31 @@ def convert_sample_to_features_dcu(code, parser, lang):
     }
 
 
-def collator_fn(batch, tokenizer):
-    pass
+def collator_fn(batch, tokenizer, cfg):
+    code_tokens_batch = [e['code_tokens'] for e in batch]
+    docstrings_batch = [e['docstring'] for e in batch]
+
+    all_input_ids = []
+    for untokenized_sent in code_tokens_batch:
+        to_convert, mapping = match_tokenized_to_untokenized_roberta(untokenized_sent, tokenizer)
+        inputs = tokenizer.convert_tokens_to_ids([tokenizer.cls_token] + to_convert + [tokenizer.sep_token])
+        all_input_ids.append(inputs[:cfg.model.max_input_length])
+    # padding
+    all_input_ids = torch.tensor(
+        [inputs + tokenizer.convert_tokens_to_ids([tokenizer.pad_token] * (cfg.model.max_input_length - len(inputs)))
+         for inputs in all_input_ids])
+
+    all_target_ids = tokenizer(
+        docstrings_batch,
+        padding='max_length',
+        max_length=cfg.model.max_target_length,
+        truncation=True,
+        return_tensors='pt').input_ids
+
+    src_padding_mask = (all_input_ids == tokenizer.pad_token_id)
+    tgt_padding_mask = (all_target_ids == tokenizer.pad_token_id)
+
+    return all_input_ids, src_padding_mask, all_target_ids, tgt_padding_mask
 
 
 def match_tokenized_to_untokenized_roberta(untokenized_sent, tokenizer):

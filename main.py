@@ -5,6 +5,7 @@ import logging
 import torch
 import hydra
 import omegaconf
+import wandb
 import numpy as np
 from transformers import RobertaTokenizerFast
 from datasets import load_dataset
@@ -13,7 +14,8 @@ from hydra.utils import get_original_cwd
 
 from models.encoder_decoder import TransformerEncoder, TransformerDecoder, TransformerEncoderDecoder
 from data.utils import LANGUAGE_GRAMMARS
-from collator import filter_sample
+from collator import filter_sample, convert_sample_to_features
+from train import run_train_baseline
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +36,14 @@ def main(cfg: omegaconf.DictConfig):
     cfg.parallel = torch.cuda.device_count() > 1
     logger.info(f'Training on {torch.cuda.device_count()} GPUs.')
     logger.info(f'Run directory: {os.getcwd()}')
+
+    wandb_cfg = omegaconf.OmegaConf.to_container(
+        cfg, resolve=True, throw_on_missing=True
+    )
+    wandb.init(project='code-syntax-augmented-transformer', entity='mweyssow', config=wandb_cfg)
+    cfg.run.output_path = os.path.join(cfg.run.base_path, cfg.run.name)
+    if not os.path.exists(cfg.run.output_path):
+        os.mkdir(cfg.run.output_path)
 
     # select the parser
     parser = Parser()
@@ -78,8 +88,21 @@ def main(cfg: omegaconf.DictConfig):
 
         # filter codes that cannot be parsed with tree_sitter
         logger.info('Filtering datasets.')
-        train_dataset.filter(lambda e: filter_sample(e, cfg.run.lang, parser))
-        valid_dataset.filter(lambda e: filter_sample(e, cfg.run.lang, parser))
+        train_dataset = train_dataset.filter(lambda e: filter_sample(e['original_string'], cfg.run.lang, parser))
+        valid_dataset = valid_dataset.filter(lambda e: filter_sample(e['original_string'], cfg.run.lang, parser))
+
+        train_dataset = train_dataset.map(lambda e: convert_sample_to_features(e['original_string'], parser, cfg.run.lang))
+        valid_dataset = valid_dataset.map(lambda e: convert_sample_to_features(e['original_string'], parser, cfg.run.lang))
+
+    if cfg.run.do_train:
+        if cfg.model.config == 'baseline_trans':
+            run_train_baseline(
+                cfg=cfg,
+                model=model,
+                tokenizer=tokenizer,
+                train_dataset=train_dataset,
+                valid_dataset=valid_dataset
+            )
 
 
 if __name__ == '__main__':
