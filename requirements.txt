@@ -48,9 +48,12 @@ six==1.16.0
 statsmodels==0.13.2
 threadpoolctl==3.1.0
 tokenizers==0.11.4
+-f https://download.pytorch.org/whl/cu113/torch_stable.html
 torch==1.10.2+cu113
 torch-scatter==2.0.9
+-f https://download.pytorch.org/whl/cu113/torch_stable.html
 torchaudio==0.10.2+cu113
+-f https://download.pytorch.org/whl/cu113/torch_stable.html
 torchvision==0.11.3+cu113
 tqdm==4.62.3
 transformers==4.16.2
