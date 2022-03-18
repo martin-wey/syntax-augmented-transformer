@@ -1,6 +1,14 @@
 ---
+base_path: runs
 name: None
+output_path: None
 dataset_dir: dataset
-seed: 42
 lang: python
+train_batch_size: 64
+valid_batch_size: 64
+learning_rate: 1e-4
+epochs: 25
+patience: 3
 do_train: True
+seed: 42
+
