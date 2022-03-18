@@ -24,6 +24,8 @@ LANGUAGE_GRAMMARS = {
     'go': Language('grammars/languages.so', 'go'),
 }
 
+SUBWORD_TOKEN = '<subword>'
+
 
 def download_url(url: str, save_path: str, chunk_size: int = 128):
     r = requests.get(url, stream=True)
@@ -115,3 +117,18 @@ def match_tokenized_to_untokenized_roberta(untokenized_sent, tokenizer):
             cont = cont + len(temp)
     flat_tokenized = [item for sublist in tokenized for item in sublist]
     return flat_tokenized, mapping
+
+
+def get_u_subword(u, mapping):
+    new_u = []
+    for j, l in enumerate(u):
+        new_u.append(l)
+        new_u = new_u + ([SUBWORD_TOKEN] * (len(mapping[j]) - 1))
+    return new_u
+
+def get_c_or_d_subword(x, mapping):
+    new_x = []
+    for j, l in enumerate(x):
+        new_x = new_x + ([SUBWORD_TOKEN] * (len(mapping[j]) - 1))
+        new_x.append(l)
+    return new_x
