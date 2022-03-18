@@ -1,6 +1,7 @@
-from src.data.code2ast import get_id, get_root_ast
 import networkx as nx
 import numpy as np
+
+from data.code2ast import get_id, get_root_ast
 
 SEPARATOR = '<sep>'
 

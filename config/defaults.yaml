@@ -1,0 +1,8 @@
+---
+defaults:
+  - _self_
+  - run: default
+  - model: default
+
+device: cuda
+parallel: False
