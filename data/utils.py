@@ -6,7 +6,23 @@ import gzip
 import re
 from typing import Optional
 
+from tree_sitter import Language
 from tqdm import tqdm
+
+LANGUAGES = (
+    'python',
+    'java',
+    'ruby',
+    'javascript',
+    'go',
+    'php'
+)
+
+LANGUAGE_GRAMMARS = {
+    'python': Language('grammars/languages.so', 'python'),
+    'javascript': Language('grammars/languages.so', 'javascript'),
+    'go': Language('grammars/languages.so', 'go'),
+}
 
 
 def download_url(url: str, save_path: str, chunk_size: int = 128):

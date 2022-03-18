@@ -1,0 +1,16 @@
+---
+config: baseline_trans
+tokenizer_name_or_path: microsoft/codebert-base
+vocab_size: 50265
+# encoder arguments
+encoder_hidden_dim: 768
+encoder_num_heads: 6
+encoder_num_layers: 6
+encoder_ff_hidden_dim: 2048
+encoder_dropout: 0.1
+# decoder arguments
+decoder_hidden_dim: 768
+decoder_num_heads: 6
+decoder_num_layers: 6
+decoder_ff_hidden_dim: 2048
+decoder_dropout: 0.1
