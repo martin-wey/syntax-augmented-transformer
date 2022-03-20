@@ -126,7 +126,16 @@ def get_u_subword(u, mapping):
         new_u = new_u + ([SUBWORD_TOKEN] * (len(mapping[j]) - 1))
     return new_u
 
-def get_c_or_d_subword(x, mapping):
+
+def get_d_subword(x, mapping):
+    new_x = []
+    for j, l in enumerate(x):
+        new_x = new_x + ([0] * (len(mapping[j]) - 1))
+        new_x.append(l)
+    return new_x
+
+
+def get_c_subword(x, mapping):
     new_x = []
     for j, l in enumerate(x):
         new_x = new_x + ([SUBWORD_TOKEN] * (len(mapping[j]) - 1))

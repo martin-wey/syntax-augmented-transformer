@@ -1,6 +1,49 @@
 import torch.nn as nn
 import torch
 
+
+class SimpleSyntaxPositionalEmbedding(nn.Module):
+
+    def __init__(self,
+                 hidden_dimension=768,
+                 d_vocab=256,
+                 c_vocab=256,
+                 u_vocab=256,
+                 padding_idx_d=255,
+                 padding_idx_c=255,
+                 padding_idx_u=255):
+        super(SimpleSyntaxPositionalEmbedding, self).__init__()
+        self.embedding_d = nn.Embedding(d_vocab, hidden_dimension, padding_idx_d)
+        self.embedding_c = nn.Embedding(c_vocab, hidden_dimension, padding_idx_c)
+        self.embedding_u = nn.Embedding(u_vocab, hidden_dimension, padding_idx_u)
+        self.mix_c_d = nn.Linear(2 * hidden_dimension, hidden_dimension, bias=False)
+
+    def forward(self, seqs, d, c, u):
+        """
+
+        Args:
+            seqs: (batch_size, max_seq_len, representation_dim)
+            d: (batch_size, max_seq_len - 1)
+            c: (batch_size, max_seq_len - 1)
+            u: (batch_size, max_seq_len)
+
+        Returns:
+            Sequence + AST positional encoding
+        """
+        d = self.embedding_d(d)  # BxL-1xd
+        c = self.embedding_c(c)  # BxL-1xd
+        u = self.embedding_u(u)  # BxLxd
+
+        seqs_u = seqs + u
+        d_c = torch.relu(self.mix_c_d(torch.cat((d, c), dim=2)))  # BxL-1xd
+        for i in range(0, seqs_u.size(1)):
+            seqs_u[:, i, :] += (d_c[:, i, :]
+                                if i < d_c.shape[1] else 0) + \
+                               (d_c[:, i - 1, :]
+                                if i > 1 else 0)
+        return seqs_u
+
+
 class SyntaxPositionalEmbedding(nn.Module):
 
     def __init__(self,
@@ -25,23 +68,20 @@ class SyntaxPositionalEmbedding(nn.Module):
         self.mix_c_d_hidden = nn.Linear(mix_c_d_dim + hidden_dimension, hidden_dimension, bias=False)
 
     def forward(self, seqs, d, c, u):
-        d = self.embedding_d(d) #BxL-1xd
-        c = self.embedding_c(c) #BxL-1xd
-        u = self.embedding_u(u) #BxLxd
+        d = self.embedding_d(d)  # BxL-1xd
+        c = self.embedding_c(c)  # BxL-1xd
+        u = self.embedding_u(u)  # BxLxd
 
         seqs_u = seqs + u
-        d_c = torch.relu(self.mix_c_d(torch.cat((d, c), dim=2))) #BxL-1xd
-        seqs_u_pairs = torch.stack([seqs_u[:, i:i+2, :] for i in range(0, seqs_u.size(1)-1)], dim=1) #BxL-1x2xd
-        seqs_u_pairs = seqs_u_pairs.reshape(seqs_u_pairs.shape[0], seqs_u_pairs.shape[1], -1) #BxL-1x2d
-        seqs_u_pairs = torch.relu(self.mix_hidden(seqs_u_pairs)) #BxL-1xd
+        d_c = torch.relu(self.mix_c_d(torch.cat((d, c), dim=2)))  # BxL-1xd
+        seqs_u_pairs = torch.stack([seqs_u[:, i:i + 2, :] for i in range(0, seqs_u.size(1) - 1)], dim=1)  # BxL-1x2xd
+        seqs_u_pairs = seqs_u_pairs.reshape(seqs_u_pairs.shape[0], seqs_u_pairs.shape[1], -1)  # BxL-1x2d
+        seqs_u_pairs = torch.relu(self.mix_hidden(seqs_u_pairs))  # BxL-1xd
 
-        mix_c_d_hidden = torch.relu(self.mix_c_d_hidden(torch.cat((seqs_u_pairs, d_c), dim=2))) #BxL-1xd
+        mix_c_d_hidden = torch.relu(self.mix_c_d_hidden(torch.cat((seqs_u_pairs, d_c), dim=2)))  # BxL-1xd
         for i in range(0, seqs_u.size(1)):
             seqs_u[:, i, :] += (mix_c_d_hidden[:, i, :]
                                 if i < mix_c_d_hidden.shape[1] else 0) + \
                                (mix_c_d_hidden[:, i - 1, :]
                                 if i > 1 else 0)
         return seqs_u
-
-
-
