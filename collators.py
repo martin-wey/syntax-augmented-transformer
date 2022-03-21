@@ -118,7 +118,7 @@ def collator_fn_dcu(batch, tokenizer, cfg):
         uss.append(get_u_subword(u, mapping)[:cfg.model.max_input_length])
 
     cs = torch.tensor([c + [255] * (cfg.model.max_input_length - 1 - len(c)) for c in css])
-    ds = torch.tensor([d + [255] * (cfg.model.max_input_length - 1 - len(d)) for d in dss])
+    ds = torch.tensor([d + [999] * (cfg.model.max_input_length - 1 - len(d)) for d in dss])
     us = torch.tensor([u + [255] * (cfg.model.max_input_length - len(u)) for u in uss])
 
     src_padding_mask = (all_input_ids == tokenizer.pad_token_id)

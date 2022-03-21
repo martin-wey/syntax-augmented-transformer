@@ -58,13 +58,19 @@ def main(cfg: omegaconf.DictConfig):
             train_dataset = train_dataset.map(lambda e: convert_to_ids(e['u'], 'u', dcu_labels['labels_to_ids_u']), num_proc=4)
             valid_dataset = valid_dataset.map(lambda e: convert_to_ids(e['u'], 'u', dcu_labels['labels_to_ids_u']), num_proc=4)
 
+            ds = train_dataset['d']
+            print(max(np.max(ds)))
+
+
         if cfg.model.config not in MODEL_CLASSES:
             raise ValueError('Please specify a valid model configuration.')
 
         logger.info('Loading encoder-decoder model.')
         encoder_class, decoder_class, tokenizer_class = MODEL_CLASSES[cfg.model.config]
         tokenizer = tokenizer_class.from_pretrained(cfg.model.tokenizer_name_or_path)
-        encoder = encoder_class(vocab_size=cfg.model.vocab_size, **cfg.model.encoder_args)
+        encoder = encoder_class(vocab_size=cfg.model.vocab_size,
+                                    pad_index=tokenizer.pad_token_id,
+                                    **cfg.model.encoder_args)
         decoder = decoder_class(**cfg.model.decoder_args)
         model = TransformerEncoderDecoder(encoder=encoder,
                                           decoder=decoder,

@@ -5,19 +5,17 @@ import torch
 class SimpleSyntaxPositionalEncoding(nn.Module):
     def __init__(
         self,
-        hidden_dimension=768,
-        d_vocab=256,
-        c_vocab=256,
-        u_vocab=256,
-        padding_idx_d=255,
-        padding_idx_c=255,
-        padding_idx_u=255
+        hidden_dim=768,
+        d_vocab_size=1000,
+        c_vocab_size=256,
+        u_vocab_size=256,
+        padding_idx=-1
     ):
         super(SimpleSyntaxPositionalEncoding, self).__init__()
-        self.embedding_d = nn.Embedding(d_vocab, hidden_dimension, padding_idx_d)
-        self.embedding_c = nn.Embedding(c_vocab, hidden_dimension, padding_idx_c)
-        self.embedding_u = nn.Embedding(u_vocab, hidden_dimension, padding_idx_u)
-        self.mix_c_d = nn.Linear(2 * hidden_dimension, hidden_dimension, bias=False)
+        self.embedding_d = nn.Embedding(d_vocab_size, hidden_dim, padding_idx=999)
+        self.embedding_c = nn.Embedding(c_vocab_size, hidden_dim, padding_idx=255)
+        self.embedding_u = nn.Embedding(u_vocab_size, hidden_dim, padding_idx=255)
+        self.mix_c_d = nn.Linear(2 * hidden_dim, hidden_dim, bias=False)
 
         self.init_weights()
 
