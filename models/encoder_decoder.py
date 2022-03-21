@@ -4,10 +4,14 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
+from .syntax_positional_embedding import SimpleSyntaxPositionalEncoding
+
+
 def generate_square_subsequent_mask(sz):
     mask = (torch.triu(torch.ones((sz, sz))) == 1).transpose(0, 1)
     mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
     return mask
+
 
 def create_mask(src, tgt):
     if src is None:
@@ -60,6 +64,49 @@ class TransformerEncoder(nn.Module):
     def forward(self, src: Tensor, src_mask: Tensor, src_key_padding_mask: Tensor) -> Tensor:
         src = self.embedding(src) * math.sqrt(self.d_model)
         src = self.positional_embedding(src)
+        # permute batch_size and seq_len
+        src = src.permute(1, 0, 2)
+        output = self.encoder(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)
+        return output
+
+
+class TransformerEncoderSyntax(nn.Module):
+    def __init__(
+        self,
+        vocab_size: int,
+        hidden_dim: int,
+        num_heads: int,
+        num_layers: int,
+        dim_feedforward: int,
+        dropout: float,
+        pad_index: int = 0,
+    ):
+        super(TransformerEncoderSyntax, self).__init__()
+        self.embedding = nn.Embedding(vocab_size, hidden_dim, padding_idx=pad_index)
+        self.positional_embedding = PositionalEncoding(hidden_dim)
+        self.syntax_encoding = SimpleSyntaxPositionalEncoding()
+        encoder_layers = nn.TransformerEncoderLayer(d_model=hidden_dim,
+                                                    nhead=num_heads,
+                                                    dim_feedforward=dim_feedforward,
+                                                    dropout=dropout)
+        self.encoder = nn.TransformerEncoder(encoder_layers, num_layers=num_layers)
+        self.d_model = hidden_dim
+
+        self.init_weights()
+
+    def init_weights(self):
+        initrange = 0.1
+        nn.init.uniform_(self.embedding.weight, -initrange, initrange)
+
+    def get_embeddings(self, inputs):
+        tgt_embds = self.embedding(inputs) * math.sqrt(self.d_model)
+        tgt_embds = self.positional_embedding(tgt_embds)
+        return tgt_embds.permute(1, 0, 2)
+
+    def forward(self, src: Tensor, src_mask: Tensor, src_key_padding_mask: Tensor, d: Tensor, c: Tensor, u: Tensor) -> Tensor:
+        src = self.embedding(src) * math.sqrt(self.d_model)
+        src = self.positional_embedding(src)
+        src = self.syntax_encoding(src, d, c, u)
         # permute batch_size and seq_len
         src = src.permute(1, 0, 2)
         output = self.encoder(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)
@@ -124,9 +171,12 @@ class TransformerEncoderDecoder(nn.Module):
         """
         self.lm_head.weight = self.encoder.embedding.weight
 
-    def forward(self, src, tgt, src_padding_mask, tgt_padding_mask, memory_key_padding_mask):
+    def forward(self, src, tgt, src_padding_mask, tgt_padding_mask, memory_key_padding_mask, d=None, c=None, u=None):
         src_mask, tgt_mask = create_mask(src, tgt)
-        encoder_output = self.encoder(src, src_mask, src_padding_mask)
+        if d is not None and c is not None and u is not None:
+            encoder_output = self.encoder(src, src_mask, src_padding_mask, d, c, u)
+        else:
+            encoder_output = self.encoder(src, src_mask, src_padding_mask)
 
         tgt_embds = self.encoder.embedding(tgt) * math.sqrt(self.encoder.d_model)
         tgt_embds = self.encoder.positional_embedding(tgt_embds)

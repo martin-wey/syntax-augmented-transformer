@@ -1,13 +1,8 @@
 import io
-import tokenize
-import requests
-import zipfile
-import gzip
 import re
-from typing import Optional
+import tokenize
 
 from tree_sitter import Language
-from tqdm import tqdm
 
 LANGUAGES = (
     'python',
@@ -24,23 +19,7 @@ LANGUAGE_GRAMMARS = {
     'go': Language('grammars/languages.so', 'go'),
 }
 
-SUBWORD_TOKEN = '<subword>'
-
-
-def download_url(url: str, save_path: str, chunk_size: int = 128):
-    r = requests.get(url, stream=True)
-    with open(save_path, 'wb') as f:
-        for chunk in tqdm(r.iter_content(chunk_size=chunk_size)):
-            f.write(chunk)
-
-
-def unzip_file(file_path: str, output_dir: str, output_path: Optional[str] = None):
-    if 'gz' in file_path:
-        with gzip.open(file_path, 'rb') as f1, open(output_path, 'w') as f2:
-            f2.write(f1.read().decode('utf-8'))
-    else:
-        with zipfile.ZipFile(file_path, 'r') as f:
-            f.extractall(output_dir)
+SUBWORD_TOKEN_ID = 254
 
 
 def remove_comments_and_docstrings_java_js(string):
@@ -100,44 +79,25 @@ def remove_comments_and_docstrings_python(source):
     return out
 
 
-def match_tokenized_to_untokenized_roberta(untokenized_sent, tokenizer):
-    tokenized = []
-    mapping = {}
-    cont = 0
-    for j, t in enumerate(untokenized_sent):
-        if j == 0:
-            temp = [k for k in tokenizer.tokenize(t) if k != 'Ġ']
-            tokenized.append(temp)
-            mapping[j] = [f for f in range(cont, len(temp) + cont)]
-            cont = cont + len(temp)
-        else:
-            temp = [k for k in tokenizer.tokenize(' ' + t) if k != 'Ġ']
-            tokenized.append(temp)
-            mapping[j] = [f for f in range(cont, len(temp) + cont)]
-            cont = cont + len(temp)
-    flat_tokenized = [item for sublist in tokenized for item in sublist]
-    return flat_tokenized, mapping
-
-
 def get_u_subword(u, mapping):
     new_u = []
     for j, l in enumerate(u):
         new_u.append(l)
-        new_u = new_u + ([SUBWORD_TOKEN] * (len(mapping[j]) - 1))
+        new_u = new_u + ([SUBWORD_TOKEN_ID] * (len(mapping[j]) - 1))
     return new_u
 
 
-def get_d_subword(x, mapping):
+def get_d_subword(d, mapping):
     new_x = []
-    for j, l in enumerate(x):
+    for j, l in enumerate(d):
         new_x = new_x + ([0] * (len(mapping[j]) - 1))
         new_x.append(l)
     return new_x
 
 
-def get_c_subword(x, mapping):
+def get_c_subword(c, mapping):
     new_x = []
-    for j, l in enumerate(x):
-        new_x = new_x + ([SUBWORD_TOKEN] * (len(mapping[j]) - 1))
+    for j, l in enumerate(c):
+        new_x = new_x + ([SUBWORD_TOKEN_ID] * (len(mapping[j]) - 1))
         new_x.append(l)
     return new_x

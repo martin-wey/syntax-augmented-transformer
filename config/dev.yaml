@@ -13,9 +13,12 @@ model:
 
 device: cuda
 parallel: False
-mode: prod
-use_wandb: True
+# do not upload logs to wandb in dev mode
+mode: dev
+use_wandb: False
 
+# remove output files in dev mode
 hydra:
+  output_subdir: null
   run:
-    dir: outputs/${model.config}_${run.dataset_lang}/${now:%Y-%m-%d_%H-%M-%S}
+    dir: .

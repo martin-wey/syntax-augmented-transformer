@@ -1,4 +1,5 @@
 import logging
+from collections import Counter
 
 import torch
 from torch.utils.data import RandomSampler
@@ -43,3 +44,22 @@ def num_trainable_parameters(model, debug=False):
                 logger.info('\t{:45}\tfixed\t{}\tdevice:{}'.format(name, param.size(), param.device))
     num_params = sum(p.numel() for n, p in model.named_parameters() if p.requires_grad)
     return num_params
+
+
+def get_non_terminals_labels(label_sets):
+    all_labels = []
+    for labels in label_sets:
+        all_labels += [label for seq in labels for label in seq]
+    # use a Counter to constantly get the same order in the labels
+    ct = Counter(all_labels)
+    labels_to_ids = {}
+    for i, label in enumerate(ct):
+        labels_to_ids[label] = i
+    return labels_to_ids
+
+
+def convert_to_ids(c, column_name, labels_to_ids):
+    labels_ids = []
+    for label in c:
+        labels_ids.append(labels_to_ids[label])
+    return {column_name: labels_ids}

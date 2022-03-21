@@ -2,21 +2,30 @@ import torch.nn as nn
 import torch
 
 
-class SimpleSyntaxPositionalEmbedding(nn.Module):
-
-    def __init__(self,
-                 hidden_dimension=768,
-                 d_vocab=256,
-                 c_vocab=256,
-                 u_vocab=256,
-                 padding_idx_d=255,
-                 padding_idx_c=255,
-                 padding_idx_u=255):
-        super(SimpleSyntaxPositionalEmbedding, self).__init__()
+class SimpleSyntaxPositionalEncoding(nn.Module):
+    def __init__(
+        self,
+        hidden_dimension=768,
+        d_vocab=256,
+        c_vocab=256,
+        u_vocab=256,
+        padding_idx_d=255,
+        padding_idx_c=255,
+        padding_idx_u=255
+    ):
+        super(SimpleSyntaxPositionalEncoding, self).__init__()
         self.embedding_d = nn.Embedding(d_vocab, hidden_dimension, padding_idx_d)
         self.embedding_c = nn.Embedding(c_vocab, hidden_dimension, padding_idx_c)
         self.embedding_u = nn.Embedding(u_vocab, hidden_dimension, padding_idx_u)
         self.mix_c_d = nn.Linear(2 * hidden_dimension, hidden_dimension, bias=False)
+
+        self.init_weights()
+
+    def init_weights(self):
+        initrange = 0.1
+        nn.init.uniform_(self.embedding_d.weight, -initrange, initrange)
+        nn.init.uniform_(self.embedding_c.weight, -initrange, initrange)
+        nn.init.uniform_(self.embedding_u.weight, -initrange, initrange)
 
     def forward(self, seqs, d, c, u):
         """
@@ -45,16 +54,17 @@ class SimpleSyntaxPositionalEmbedding(nn.Module):
 
 
 class SyntaxPositionalEmbedding(nn.Module):
-
-    def __init__(self,
-                 hidden_dimension=768,
-                 d_vocab=100,
-                 c_vocab=100,
-                 u_vocab=100,
-                 d_dim=128,
-                 c_dim=128,
-                 mix_c_d_dim=128,
-                 padding_idx=0):
+    def __init__(
+        self,
+        hidden_dimension=768,
+        d_vocab=100,
+        c_vocab=100,
+        u_vocab=100,
+        d_dim=128,
+        c_dim=128,
+        mix_c_d_dim=128,
+        padding_idx=0
+    ):
         super(SyntaxPositionalEmbedding, self).__init__()
         self.hidden_dimension = hidden_dimension
         self.d_vocab = d_vocab
@@ -66,6 +76,14 @@ class SyntaxPositionalEmbedding(nn.Module):
         self.mix_c_d = nn.Linear(d_dim + c_dim, mix_c_d_dim, bias=False)
         self.mix_hidden = nn.Linear(2 * hidden_dimension, hidden_dimension, bias=False)
         self.mix_c_d_hidden = nn.Linear(mix_c_d_dim + hidden_dimension, hidden_dimension, bias=False)
+
+        self.init_weights()
+
+    def init_weights(self):
+        initrange = 0.1
+        nn.init.uniform_(self.embedding_d.weight, -initrange, initrange)
+        nn.init.uniform_(self.embedding_c.weight, -initrange, initrange)
+        nn.init.uniform_(self.embedding_u.weight, -initrange, initrange)
 
     def forward(self, seqs, d, c, u):
         d = self.embedding_d(d)  # BxL-1xd

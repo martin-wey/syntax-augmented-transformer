@@ -1,0 +1,8 @@
+---
+setup:
+  project: code-syntax-augmented-transformer
+  entity: mweyssow
+  mode: online
+watch:
+  log: all
+  freq: 100
