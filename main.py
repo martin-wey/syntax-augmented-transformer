@@ -16,6 +16,7 @@ from models.encoder_decoder import TransformerEncoder, TransformerEncoderSyntax,
 from data.utils import LANGUAGE_GRAMMARS
 from utils import convert_to_ids
 from train import train_baseline, train_syntax_augmented_trans
+from test import test_baseline, test_syntax_augmented_trans
 
 logger = logging.getLogger(__name__)
 
@@ -50,13 +51,17 @@ def main(cfg: omegaconf.DictConfig):
         dataset_path = os.path.join(cfg.run.base_path, cfg.run.dataset_dir, cfg.run.dataset_lang)
         train_dataset = load_from_disk(f'{dataset_path}/train')
         valid_dataset = load_from_disk(f'{dataset_path}/valid')
+        test_dataset = load_from_disk(f'{dataset_path}/test')
 
         if cfg.model.config == 'syntax_augmented_trans':
             dcu_labels = pickle.load(open(f'{dataset_path}/dcu_labels.pkl', 'rb'))
             train_dataset = train_dataset.map(lambda e: convert_to_ids(e['c'], 'c', dcu_labels['labels_to_ids_c']), num_proc=4)
             valid_dataset = valid_dataset.map(lambda e: convert_to_ids(e['c'], 'c', dcu_labels['labels_to_ids_c']), num_proc=4)
+            test_dataset = test_dataset.map(lambda e: convert_to_ids(e['c'], 'c', dcu_labels['labels_to_ids_c']), num_proc=4)
+
             train_dataset = train_dataset.map(lambda e: convert_to_ids(e['u'], 'u', dcu_labels['labels_to_ids_u']), num_proc=4)
             valid_dataset = valid_dataset.map(lambda e: convert_to_ids(e['u'], 'u', dcu_labels['labels_to_ids_u']), num_proc=4)
+            test_dataset = test_dataset.map(lambda e: convert_to_ids(e['u'], 'u', dcu_labels['labels_to_ids_u']), num_proc=4)
 
             ds = train_dataset['d']
             print(max(np.max(ds)))
@@ -96,6 +101,22 @@ def main(cfg: omegaconf.DictConfig):
                 tokenizer=tokenizer,
                 train_dataset=train_dataset,
                 valid_dataset=valid_dataset
+            )
+
+    if cfg.run.do_test:
+        if cfg.model.config == 'baseline_trans':
+            test_baseline(
+                cfg=cfg,
+                model=model,
+                tokenizer=tokenizer,
+                test_dataset=test_dataset
+            )
+        elif cfg.model.config == 'syntax_augmented_trans':
+            test_syntax_augmented_trans(
+                cfg=cfg,
+                model=model,
+                tokenizer=tokenizer,
+                test_dataset=test_dataset
             )
 
 
