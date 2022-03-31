@@ -7,6 +7,7 @@ defaults:
 
 model:
   tokenizer_name_or_path: microsoft/codebert-base
+  checkpoint: null
   vocab_size: 50265
   max_input_length: 256
   max_target_length: 128

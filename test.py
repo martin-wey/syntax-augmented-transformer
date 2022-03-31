@@ -1,3 +1,4 @@
+import os
 import logging
 import pickle
 
@@ -11,12 +12,13 @@ from models.encoder_decoder import create_mask, Beam
 logger = logging.getLogger(__name__)
 
 
-def save_predictions(p, test_dataset):
+def save_predictions(p, test_dataset, cfg):
+    save_path = cfg.model.checkpoint if cfg.model.checkpoint is not None else None
     logger.info('Saving predictions.')
     predictions = []
     golds = []
-    with open('test.pkl', 'wb') as f1, \
-            open('predictions.pkl', 'wb') as f2:
+    with open(os.path.join(save_path, 'test.pkl'), 'wb') as f1, \
+            open(os.path.join(save_path, 'predictions.pkl'), 'wb') as f2:
         for ref, (idx, gold) in zip(p, enumerate(test_dataset)):
             predictions.append(ref)
             golds.append(gold["docstring"])
@@ -79,8 +81,7 @@ def test_baseline(cfg, model, tokenizer, test_dataset):
             encoder_output = model.encoder(all_input_ids.to(cfg.device), src_mask, src_padding_mask.to(cfg.device))
             batch_list = compute_beam_search_batch(encoder_output, all_input_ids, src_mask, tokenizer, model)
             predictions += batch_list
-
-        save_predictions(predictions, test_dataset)
+    save_predictions(predictions, test_dataset, cfg)
 
 
 def test_syntax_augmented_trans(cfg, model, tokenizer, test_dataset):
@@ -102,5 +103,4 @@ def test_syntax_augmented_trans(cfg, model, tokenizer, test_dataset):
                                            ds.to(cfg.device), cs.to(cfg.device), us.to(cfg.device))
             batch_list = compute_beam_search_batch(encoder_output, all_input_ids, src_mask, tokenizer, model)
             predictions += batch_list
-
-        save_predictions(predictions, test_dataset)
+    save_predictions(predictions, test_dataset, cfg)
