@@ -86,43 +86,17 @@ def solve_string_problems(G):
 # preprocess code, obtain the ast and returns a network graph.
 # it returns the graph of the ast and the preprocessed code
 # directed graph
-def code2ast(code, parser, lang='python'):
-    if lang == 'python':
-        # preprocess
-        code = remove_comments_and_docstrings_python(code)
-        tree = parser.parse(bytes(code, "utf8"))
-
-        G = nx.DiGraph()
-        # add root
-        G.add_node(0, type=tree.root_node.type,
-                   is_terminal=False,
-                   start=tree.root_node.start_byte,
-                   end=tree.root_node.end_byte)
-        get_graph_from_tree(tree.root_node, G, 0)
-    elif lang == 'javascript' or lang == 'go':
-        code = remove_comments_and_docstrings_java_js(code)
-        tree = parser.parse(bytes(code, "utf8"))
-
-        G = nx.DiGraph()
-        # add root
-        G.add_node(0, type=tree.root_node.type,
-                   is_terminal=False,
-                   start=tree.root_node.start_byte,
-                   end=tree.root_node.end_byte)
-        get_graph_from_tree(tree.root_node, G, 0)
-    elif lang == 'php':
-        code = remove_comments_php(code)
-        tree = parser.parse(bytes(code, "utf8"))
-
-        G = nx.DiGraph()
-        # add root
-        G.add_node(0, type=tree.root_node.type,
-                   is_terminal=False,
-                   start=tree.root_node.start_byte,
-                   end=tree.root_node.end_byte)
-        get_graph_from_tree(tree.root_node, G, 0)
+def code2ast(code, parser):
+    tree = parser.parse(bytes(code, "utf8"))
+    G = nx.DiGraph()
+    # add root
+    G.add_node(0, type=tree.root_node.type,
+               is_terminal=False,
+               start=tree.root_node.start_byte,
+               end=tree.root_node.end_byte)
+    get_graph_from_tree(tree.root_node, G, 0)
     solve_string_problems(G)
-    return G, code
+    return G
 
 
 # it adds dependency labels between non-terminals to the previous obtained ast graph

@@ -1,16 +1,16 @@
-import numpy as np
 import torch
 
 import networkx as nx
 
 from data.code2ast import code2ast, get_tokens_ast, has_error
 from data.binary_tree import ast2binary, tree_to_distance
-from data.utils import get_c_subword, get_d_subword, get_u_subword
+from data.utils import get_c_subword, get_d_subword, get_u_subword, preprocess_code
 
 
 def filter_sample(code, lang, parser):
     try:
-        G, code_pre = code2ast(code=code, parser=parser, lang=lang)
+        code = preprocess_code(code, lang)
+        G = code2ast(code=code, parser=parser)
         assert nx.is_tree(nx.Graph(G))
         assert nx.is_connected(nx.Graph(G))
     except:
@@ -21,11 +21,11 @@ def filter_sample(code, lang, parser):
     return True
 
 
-def convert_sample_to_features(code, parser, lang):
-    G, pre_code = code2ast(code, parser, lang)
+def convert_sample_to_features(code, parser):
+    G = code2ast(code, parser)
     binary_ast = ast2binary(G)
     d, c, _, u = tree_to_distance(binary_ast, 0)
-    code_tokens = get_tokens_ast(G, pre_code)
+    code_tokens = get_tokens_ast(G, code)
 
     return {
         'd': d,

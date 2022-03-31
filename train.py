@@ -281,6 +281,7 @@ def evaluate_syntax_augmented_trans(
 
 def train_code_tokenizer(cfg, train_dataset, parser):
     #Normalization + pre-tokenization
+    print(cfg.run.dataset_lang)
     pretokenizer = PreTokenizer.custom(CodePreTokenizer(parser, lang=cfg.run.dataset_lang))
     tokenizer = Tokenizer(models.WordPiece(unl_token="[UNK]"))
     tokenizer.pre_tokenizer = pretokenizer
@@ -295,11 +296,12 @@ def train_code_tokenizer(cfg, train_dataset, parser):
     tokenizer.decoder = decoders.WordPiece()
 
     example_code = """def maximum(a, b):
-    #return the maximum of two numbers
+    # return the maximum of two numbers
     if a > b:
         return a
     return b"""
     encoded_seq = tokenizer.encode(example_code)
+    logger.info(f"Pretokenized: {tokenizer.pre_tokenizer.pre_tokenize_str(example_code)}")
     logger.info(f"Encoded: {encoded_seq.ids}")
     logger.info(f"Decoded: {tokenizer.decode(encoded_seq.ids)}")
 

@@ -79,6 +79,15 @@ def remove_comments_and_docstrings_python(source):
     return out
 
 
+def preprocess_code(code, lang):
+    if lang == 'python':
+        return remove_comments_and_docstrings_python(code)
+    elif lang == 'javascript' or lang == 'go':
+        return remove_comments_and_docstrings_java_js(code)
+    elif lang == 'php':
+        return remove_comments_php(code)
+
+
 def get_u_subword(u, mapping):
     new_u = []
     for j, l in enumerate(u):

@@ -8,7 +8,7 @@ from tree_sitter import Parser
 from datasets import load_dataset
 
 from collators import filter_sample, convert_sample_to_features
-from data.utils import LANGUAGE_GRAMMARS
+from data.utils import LANGUAGE_GRAMMARS, preprocess_code
 from utils import get_non_terminals_labels
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,8 @@ if __name__ == '__main__':
     logger.info('Filtering datasets.')
     for key, item in dataset.items():
         dataset[key] = dataset[key].filter(lambda e: filter_sample(e['original_string'], args.lang, parser), num_proc=8)
-        dataset[key] = dataset[key].map(lambda e: convert_sample_to_features(e['original_string'], parser, args.lang), num_proc=8)
+        dataset[key] = dataset[key].map(lambda e: {'original_string': preprocess_code(e['original_string'], args.lang)}, num_proc=8)
+        dataset[key] = dataset[key].map(lambda e: convert_sample_to_features(e['original_string'], parser), num_proc=8)
         dataset[key].save_to_disk(f'{dataset_path}/{key}')
 
     # get class labels-ids mapping for c and u
