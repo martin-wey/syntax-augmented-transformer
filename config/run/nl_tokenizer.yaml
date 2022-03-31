@@ -1,0 +1,11 @@
+---
+base_path: null
+
+dataset_dir: dataset
+dataset_lang: python
+
+do_train: False
+do_test: False
+do_train_code_tokenizer: False
+do_train_nl_tokenizer: True
+seed: 42

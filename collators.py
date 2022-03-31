@@ -55,6 +55,19 @@ def match_tokenized_to_untokenized_roberta(untokenized_sent, tokenizer):
     return flat_tokenized, mapping
 
 
+def match_tokenized_to_untokenized_wordpiece(untokenized_sent, tokenizer):
+    tokenized = []
+    mapping = {}
+    cont = 0
+    for j, t in enumerate(untokenized_sent):
+        temp = [k for k in tokenizer.tokenize(t)]
+        tokenized.append(temp)
+        mapping[j] = [f for f in range(cont, len(temp) + cont)]
+        cont = cont + len(temp)
+    flat_tokenized = [item for sublist in tokenized for item in sublist]
+    return flat_tokenized, mapping
+
+
 def collator_fn(batch, tokenizer, cfg):
     code_tokens_batch = [e['code'] for e in batch]
     docstrings_batch = [e['docstring'] for e in batch]

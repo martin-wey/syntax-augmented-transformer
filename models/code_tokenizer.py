@@ -1,6 +1,6 @@
 from typing import List, Dict
 
-from tokenizers import NormalizedString, PreTokenizedString
+from tokenizers import NormalizedString, PreTokenizedString, Tokenizer, pre_tokenizers
 
 from data.code2ast import code2ast, get_token
 
@@ -37,3 +37,14 @@ class CodePreTokenizer:
 
     def pre_tokenize(self, pretok: PreTokenizedString):
         pretok.split(self.code_split)
+
+
+def save_code_tokenizer(tokenizer, path):
+    tokenizer.pre_tokenizer = pre_tokenizers.BertPreTokenizer()
+    tokenizer.save(path)
+
+
+def load_code_tokenizer(path, parser, lang):
+    loaded_tokenizer = Tokenizer.from_file(path)
+    loaded_tokenizer.pre_tokenizer = pre_tokenizers.PreTokenizer.custom(CodePreTokenizer(parser, lang=lang))
+    return loaded_tokenizer

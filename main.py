@@ -12,10 +12,11 @@ from transformers import RobertaTokenizerFast
 from datasets import load_from_disk
 from tree_sitter import Parser
 
-from models.encoder_decoder import TransformerEncoder, TransformerEncoderSyntax, TransformerDecoder, TransformerEncoderDecoder
+from models.encoder_decoder import TransformerEncoder, TransformerEncoderSyntax, \
+    TransformerDecoder, TransformerEncoderDecoder
 from data.utils import LANGUAGE_GRAMMARS
 from utils import convert_to_ids
-from train import train_baseline, train_syntax_augmented_trans
+from train import train_baseline, train_syntax_augmented_trans, train_code_tokenizer, train_nl_tokenizer
 from test import test_baseline, test_syntax_augmented_trans
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,18 @@ def main(cfg: omegaconf.DictConfig):
     # select the parser
     parser = Parser()
     parser.set_language(LANGUAGE_GRAMMARS[cfg.run.dataset_lang])
+
+    if cfg.run.do_train_code_tokenizer:
+        logger.info('Loading train datasets.')
+        dataset_path = os.path.join(cfg.run.base_path, cfg.run.dataset_dir, cfg.run.dataset_lang)
+        train_dataset = load_from_disk(f'{dataset_path}/train')
+        train_code_tokenizer(cfg, train_dataset['original_string'], parser)
+
+    if cfg.run.do_train_nl_tokenizer:
+        logger.info('Loading train datasets.')
+        dataset_path = os.path.join(cfg.run.base_path, cfg.run.dataset_dir, cfg.run.dataset_lang)
+        train_dataset = load_from_disk(f'{dataset_path}/train')
+        train_nl_tokenizer(train_dataset['docstring'])
 
     if cfg.run.do_train or cfg.run.do_test:
         logger.info('Loading train/valid datasets.')
