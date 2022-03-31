@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 MODEL_CLASSES = {
     'baseline_trans': (TransformerEncoder, TransformerDecoder, RobertaTokenizerFast),
     'syntax_augmented_trans': (TransformerEncoderSyntax, TransformerDecoder, RobertaTokenizerFast),
+    'syntax_augmented_trans_gated': (TransformerEncoderSyntax, TransformerDecoder, RobertaTokenizerFast),
 }
 
 
@@ -66,7 +67,7 @@ def main(cfg: omegaconf.DictConfig):
         valid_dataset = load_from_disk(f'{dataset_path}/valid')
         test_dataset = load_from_disk(f'{dataset_path}/test')
 
-        if cfg.model.config == 'syntax_augmented_trans':
+        if cfg.model.config in ['syntax_augmented_trans', 'syntax_augmented_trans_gated']:
             dcu_labels = pickle.load(open(f'{dataset_path}/dcu_labels.pkl', 'rb'))
             train_dataset = train_dataset.map(lambda e: convert_to_ids(e['c'], 'c', dcu_labels['labels_to_ids_c']), num_proc=4)
             valid_dataset = valid_dataset.map(lambda e: convert_to_ids(e['c'], 'c', dcu_labels['labels_to_ids_c']), num_proc=4)
@@ -75,10 +76,6 @@ def main(cfg: omegaconf.DictConfig):
             train_dataset = train_dataset.map(lambda e: convert_to_ids(e['u'], 'u', dcu_labels['labels_to_ids_u']), num_proc=4)
             valid_dataset = valid_dataset.map(lambda e: convert_to_ids(e['u'], 'u', dcu_labels['labels_to_ids_u']), num_proc=4)
             test_dataset = test_dataset.map(lambda e: convert_to_ids(e['u'], 'u', dcu_labels['labels_to_ids_u']), num_proc=4)
-
-            ds = train_dataset['d']
-            print(max(np.max(ds)))
-
 
         if cfg.model.config not in MODEL_CLASSES:
             raise ValueError('Please specify a valid model configuration.')
@@ -94,6 +91,11 @@ def main(cfg: omegaconf.DictConfig):
                                           decoder=decoder,
                                           d_model=cfg.model.encoder_args.hidden_dim,
                                           vocab_size=cfg.model.vocab_size)
+        if cfg.model.checkpoint is not None:
+            logger.info('Restoring model checkpoint.')
+            checkpoint = torch.load(os.path.join(cfg.run.base_path, cfg.model.checkpoint, 'pytorch_model.bin'))
+            model.load_state_dict(checkpoint)
+
         if cfg.parallel:
             model = torch.nn.DataParallel(model)
         model.to(cfg.device)
@@ -107,7 +109,7 @@ def main(cfg: omegaconf.DictConfig):
                 train_dataset=train_dataset,
                 valid_dataset=valid_dataset
             )
-        elif cfg.model.config == 'syntax_augmented_trans':
+        elif cfg.model.config in ['syntax_augmented_trans', 'syntax_augmented_trans_gated']:
             train_syntax_augmented_trans(
                 cfg=cfg,
                 model=model,
@@ -124,7 +126,7 @@ def main(cfg: omegaconf.DictConfig):
                 tokenizer=tokenizer,
                 test_dataset=test_dataset
             )
-        elif cfg.model.config == 'syntax_augmented_trans':
+        elif cfg.model.config in ['syntax_augmented_trans', 'syntax_augmented_trans_gated']:
             test_syntax_augmented_trans(
                 cfg=cfg,
                 model=model,

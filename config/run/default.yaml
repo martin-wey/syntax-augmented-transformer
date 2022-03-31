@@ -1,5 +1,5 @@
 ---
-base_path: null
+base_path: null   # leave it null
 
 dataset_dir: dataset
 dataset_lang: python
@@ -10,7 +10,7 @@ learning_rate: 1e-4
 epochs: 25
 patience: 3
 
-do_train: True
+do_train: False
 do_test: False
 do_train_code_tokenizer: True
 do_train_nl_tokenizer: False
