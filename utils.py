@@ -53,8 +53,12 @@ def get_non_terminals_labels(label_sets):
     # use a Counter to constantly get the same order in the labels
     ct = Counter(all_labels)
     labels_to_ids = {}
-    for i, label in enumerate(ct):
+    labels_to_ids['[PAD]'] = 0
+    labels_to_ids['[SUBWORD]'] = 1
+    i = 2
+    for label in ct:
         labels_to_ids[label] = i
+        i += 1
     return labels_to_ids
 
 

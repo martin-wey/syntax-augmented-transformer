@@ -55,19 +55,6 @@ def match_tokenized_to_untokenized_roberta(untokenized_sent, tokenizer):
     return flat_tokenized, mapping
 
 
-def match_tokenized_to_untokenized_wordpiece(untokenized_sent, tokenizer):
-    tokenized = []
-    mapping = {}
-    cont = 0
-    for j, t in enumerate(untokenized_sent):
-        temp = [k for k in tokenizer.tokenize(t)]
-        tokenized.append(temp)
-        mapping[j] = [f for f in range(cont, len(temp) + cont)]
-        cont = cont + len(temp)
-    flat_tokenized = [item for sublist in tokenized for item in sublist]
-    return flat_tokenized, mapping
-
-
 def collator_fn(batch, tokenizer, cfg):
     code_tokens_batch = [e['code'] for e in batch]
     docstrings_batch = [e['docstring'] for e in batch]
@@ -76,7 +63,7 @@ def collator_fn(batch, tokenizer, cfg):
     for untokenized_sent in code_tokens_batch:
         to_convert, mapping = match_tokenized_to_untokenized_roberta(untokenized_sent, tokenizer)
         to_convert = to_convert[:cfg.model.max_input_length - 2]
-        inputs = tokenizer.convert_tokens_to_ids([tokenizer.cls_token] + to_convert + [tokenizer.sep_token])
+        inputs = tokenizer.convert_tokens_to_ids([tokenizer.bos_token] + to_convert + [tokenizer.eos_token])
         all_input_ids.append(inputs)
     # padding
     all_input_ids = torch.tensor(
@@ -109,7 +96,7 @@ def collator_fn_dcu(batch, tokenizer, cfg):
     for untokenized_sent in code_tokens_batch:
         to_convert, mapping = match_tokenized_to_untokenized_roberta(untokenized_sent, tokenizer)
         to_convert = to_convert[:cfg.model.max_input_length - 2]
-        inputs = tokenizer.convert_tokens_to_ids([tokenizer.cls_token] + to_convert + [tokenizer.sep_token])
+        inputs = tokenizer.convert_tokens_to_ids([tokenizer.bos_token] + to_convert + [tokenizer.eos_token])
         all_inputs.append(inputs)
         all_mappings.append({x: [l + 1 for l in y] for x, y in mapping.items()})
     # pad sequences
@@ -130,9 +117,12 @@ def collator_fn_dcu(batch, tokenizer, cfg):
         dss.append(get_d_subword(d, mapping)[:cfg.model.max_input_length - 1])
         uss.append(get_u_subword(u, mapping)[:cfg.model.max_input_length])
 
-    cs = torch.tensor([c + [255] * (cfg.model.max_input_length - 1 - len(c)) for c in css])
+    # cs = torch.tensor([c + [255] * (cfg.model.max_input_length - 1 - len(c)) for c in css])
+    # ds = torch.tensor([d + [999] * (cfg.model.max_input_length - 1 - len(d)) for d in dss])
+    # us = torch.tensor([u + [255] * (cfg.model.max_input_length - len(u)) for u in uss])
+    cs = torch.tensor([c + [0] * (cfg.model.max_input_length - 1 - len(c)) for c in css])
     ds = torch.tensor([d + [999] * (cfg.model.max_input_length - 1 - len(d)) for d in dss])
-    us = torch.tensor([u + [255] * (cfg.model.max_input_length - len(u)) for u in uss])
+    us = torch.tensor([u + [0] * (cfg.model.max_input_length - len(u)) for u in uss])
 
     src_padding_mask = (all_input_ids == tokenizer.pad_token_id)
     tgt_padding_mask = (all_target_ids == tokenizer.pad_token_id)

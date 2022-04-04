@@ -4,19 +4,14 @@ defaults:
   - run: default
   - model: baseline_trans
   - wandb: default
+  - hydra: default
 
 model:
   tokenizer_name_or_path: microsoft/codebert-base
   checkpoint: null
-  vocab_size: 50265
   max_input_length: 256
   max_target_length: 128
 
 device: cuda
 parallel: False
-mode: prod
 use_wandb: True
-
-hydra:
-  run:
-    dir: outputs/${model.config}_${run.dataset_lang}/${now:%Y-%m-%d_%H-%M-%S}

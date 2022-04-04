@@ -19,8 +19,6 @@ LANGUAGE_GRAMMARS = {
     'go': Language('grammars/languages.so', 'go'),
 }
 
-SUBWORD_TOKEN_ID = 254
-
 
 def remove_comments_and_docstrings_java_js(string):
     """Source: https://stackoverflow.com/questions/2319019/using-regex-to-remove-comments-from-source-files"""
@@ -92,7 +90,7 @@ def get_u_subword(u, mapping):
     new_u = []
     for j, l in enumerate(u):
         new_u.append(l)
-        new_u = new_u + ([SUBWORD_TOKEN_ID] * (len(mapping[j]) - 1))
+        new_u = new_u + ([1] * (len(mapping[j]) - 1))
     return new_u
 
 
@@ -107,6 +105,6 @@ def get_d_subword(d, mapping):
 def get_c_subword(c, mapping):
     new_x = []
     for j, l in enumerate(c):
-        new_x = new_x + ([SUBWORD_TOKEN_ID] * (len(mapping[j]) - 1))
+        new_x = new_x + ([1] * (len(mapping[j]) - 1))
         new_x.append(l)
     return new_x

@@ -7,7 +7,9 @@ encoder_args:
   num_layers: 6
   dim_feedforward: 2048
   dropout: 0.1
-  syntax_gate: False
+  d_vocab_size: 1000
+  c_vocab_size: null
+  u_vocab_size: null
 
 decoder_args:
   hidden_dim: 768

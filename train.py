@@ -12,7 +12,6 @@ from tokenizers.normalizers import Lowercase, StripAccents
 
 from utils import get_random_sampler, num_trainable_parameters
 from collators import collator_fn, collator_fn_dcu
-from models.code_tokenizer import CodePreTokenizer, save_code_tokenizer
 
 logger = logging.getLogger(__name__)
 

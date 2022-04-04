@@ -7,14 +7,13 @@ class SimpleSyntaxPositionalEncoding(nn.Module):
         self,
         hidden_dim=768,
         d_vocab_size=1000,
-        c_vocab_size=256,
-        u_vocab_size=256,
-        padding_idx=-1
+        c_vocab_size=155,
+        u_vocab_size=27,
     ):
         super(SimpleSyntaxPositionalEncoding, self).__init__()
         self.embedding_d = nn.Embedding(d_vocab_size, hidden_dim, padding_idx=999)
-        self.embedding_c = nn.Embedding(c_vocab_size, hidden_dim, padding_idx=255)
-        self.embedding_u = nn.Embedding(u_vocab_size, hidden_dim, padding_idx=255)
+        self.embedding_c = nn.Embedding(c_vocab_size, hidden_dim, padding_idx=0)
+        self.embedding_u = nn.Embedding(u_vocab_size, hidden_dim, padding_idx=0)
         self.mix_c_d = nn.Linear(2 * hidden_dim, hidden_dim, bias=False)
 
         self.init_weights()

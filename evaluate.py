@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 from collators import collator_fn, collator_fn_dcu
 from models.encoder_decoder import create_mask, Beam
+import models.bleu as bleu
 
 logger = logging.getLogger(__name__)
 
@@ -104,3 +105,24 @@ def test_syntax_augmented_trans(cfg, model, tokenizer, test_dataset):
             batch_list = compute_beam_search_batch(encoder_output, all_input_ids, src_mask, tokenizer, model)
             predictions += batch_list
     save_predictions(predictions, test_dataset, cfg)
+
+
+def compute_bleu(predictions_file, gold_file):
+    with open(predictions_file, 'rb') as f1, open(gold_file, 'rb') as f2:
+        predictions = pickle.load(f1)
+        golds = pickle.load(f2)
+
+    preds, refs = [], []
+    for pred, gold in zip(predictions, golds):
+        preds.append(bleu.splitPuncts(pred.strip().lower()))
+        refs.append(bleu.splitPuncts(pred.strip().lower()))
+
+    score = [0] * 5
+    num = 0.0
+    for pred, ref in zip(preds, refs):
+        bl = bleu.bleu(pred, ref)
+        score = [score[i] + bl[i] for i in range(0, len(bl))]
+        num += 1
+    bleu_score = [s * 100.0 / num for s in score][0]
+    logger.info(f'  bleu-4 = {bleu_score}')
+    logger.info('  ' + '*' * 20)

@@ -16,15 +16,14 @@ from models.encoder_decoder import TransformerEncoder, TransformerEncoderSyntax,
     TransformerDecoder, TransformerEncoderDecoder
 from data.utils import LANGUAGE_GRAMMARS
 from utils import convert_to_ids
-from train import train_baseline, train_syntax_augmented_trans, train_code_tokenizer, train_nl_tokenizer
-from test import test_baseline, test_syntax_augmented_trans
+from train import train_baseline, train_syntax_augmented_trans
+from evaluate import test_baseline, test_syntax_augmented_trans
 
 logger = logging.getLogger(__name__)
 
 MODEL_CLASSES = {
     'baseline_trans': (TransformerEncoder, TransformerDecoder, RobertaTokenizerFast),
-    'syntax_augmented_trans': (TransformerEncoderSyntax, TransformerDecoder, RobertaTokenizerFast),
-    'syntax_augmented_trans_gated': (TransformerEncoderSyntax, TransformerDecoder, RobertaTokenizerFast),
+    'syntax_augmented_trans': (TransformerEncoderSyntax, TransformerDecoder, RobertaTokenizerFast)
 }
 
 
@@ -48,18 +47,6 @@ def main(cfg: omegaconf.DictConfig):
     parser = Parser()
     parser.set_language(LANGUAGE_GRAMMARS[cfg.run.dataset_lang])
 
-    if cfg.run.do_train_code_tokenizer:
-        logger.info('Loading train datasets.')
-        dataset_path = os.path.join(cfg.run.base_path, cfg.run.dataset_dir, cfg.run.dataset_lang)
-        train_dataset = load_from_disk(f'{dataset_path}/train')
-        train_code_tokenizer(cfg, train_dataset['original_string'], parser)
-
-    if cfg.run.do_train_nl_tokenizer:
-        logger.info('Loading train datasets.')
-        dataset_path = os.path.join(cfg.run.base_path, cfg.run.dataset_dir, cfg.run.dataset_lang)
-        train_dataset = load_from_disk(f'{dataset_path}/train')
-        train_nl_tokenizer(train_dataset['docstring'])
-
     if cfg.run.do_train or cfg.run.do_test:
         logger.info('Loading train/valid datasets.')
         dataset_path = os.path.join(cfg.run.base_path, cfg.run.dataset_dir, cfg.run.dataset_lang)
@@ -67,7 +54,7 @@ def main(cfg: omegaconf.DictConfig):
         valid_dataset = load_from_disk(f'{dataset_path}/valid')
         test_dataset = load_from_disk(f'{dataset_path}/test')
 
-        if cfg.model.config in ['syntax_augmented_trans', 'syntax_augmented_trans_gated']:
+        if cfg.model.config in ['syntax_augmented_trans']:
             dcu_labels = pickle.load(open(f'{dataset_path}/dcu_labels.pkl', 'rb'))
             train_dataset = train_dataset.map(lambda e: convert_to_ids(e['c'], 'c', dcu_labels['labels_to_ids_c']), num_proc=4)
             valid_dataset = valid_dataset.map(lambda e: convert_to_ids(e['c'], 'c', dcu_labels['labels_to_ids_c']), num_proc=4)
@@ -77,20 +64,23 @@ def main(cfg: omegaconf.DictConfig):
             valid_dataset = valid_dataset.map(lambda e: convert_to_ids(e['u'], 'u', dcu_labels['labels_to_ids_u']), num_proc=4)
             test_dataset = test_dataset.map(lambda e: convert_to_ids(e['u'], 'u', dcu_labels['labels_to_ids_u']), num_proc=4)
 
+            cfg.model.encoder_args.c_vocab_size = len(dcu_labels['labels_to_ids_c'])
+            cfg.model.encoder_args.u_vocab_size = len(dcu_labels['labels_to_ids_u'])
+
         if cfg.model.config not in MODEL_CLASSES:
             raise ValueError('Please specify a valid model configuration.')
 
         logger.info('Loading encoder-decoder model.')
         encoder_class, decoder_class, tokenizer_class = MODEL_CLASSES[cfg.model.config]
         tokenizer = tokenizer_class.from_pretrained(cfg.model.tokenizer_name_or_path)
-        encoder = encoder_class(vocab_size=cfg.model.vocab_size,
-                                    pad_index=tokenizer.pad_token_id,
-                                    **cfg.model.encoder_args)
+        encoder = encoder_class(vocab_size=len(tokenizer),
+                                pad_index=tokenizer.pad_token_id,
+                                **cfg.model.encoder_args)
         decoder = decoder_class(**cfg.model.decoder_args)
         model = TransformerEncoderDecoder(encoder=encoder,
                                           decoder=decoder,
                                           d_model=cfg.model.encoder_args.hidden_dim,
-                                          vocab_size=cfg.model.vocab_size)
+                                          vocab_size=len(tokenizer))
         if cfg.model.checkpoint is not None:
             logger.info('Restoring model checkpoint.')
             checkpoint = torch.load(os.path.join(cfg.run.base_path, cfg.model.checkpoint, 'pytorch_model.bin'))
@@ -109,7 +99,7 @@ def main(cfg: omegaconf.DictConfig):
                 train_dataset=train_dataset,
                 valid_dataset=valid_dataset
             )
-        elif cfg.model.config in ['syntax_augmented_trans', 'syntax_augmented_trans_gated']:
+        elif cfg.model.config in ['syntax_augmented_trans']:
             train_syntax_augmented_trans(
                 cfg=cfg,
                 model=model,
@@ -126,7 +116,7 @@ def main(cfg: omegaconf.DictConfig):
                 tokenizer=tokenizer,
                 test_dataset=test_dataset
             )
-        elif cfg.model.config in ['syntax_augmented_trans', 'syntax_augmented_trans_gated']:
+        elif cfg.model.config in ['syntax_augmented_trans']:
             test_syntax_augmented_trans(
                 cfg=cfg,
                 model=model,

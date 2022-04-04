@@ -12,6 +12,5 @@ patience: 3
 
 do_train: False
 do_test: False
-do_train_code_tokenizer: True
-do_train_nl_tokenizer: False
+run_bleu: False
 seed: 42

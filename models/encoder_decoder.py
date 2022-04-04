@@ -29,16 +29,6 @@ def create_mask(src, tgt):
     return src_mask, tgt_mask
 
 
-class HighwayGate(nn.Module):
-    def __init__(self, in_out_dim, bias=True):
-        super(HighwayGate, self).__init__()
-        self.gateway_linear = nn.Linear(in_out_dim, in_out_dim, bias=bias)
-
-    def forward(self, x1, x2):
-        coef = torch.sigmoid(self.gateway_linear(x1))
-        return coef * x1 + (1 - coef) * x2
-
-
 class TransformerEncoder(nn.Module):
     def __init__(
         self,
@@ -84,20 +74,22 @@ class TransformerEncoderSyntax(nn.Module):
     def __init__(
         self,
         vocab_size: int,
+        d_vocab_size: int,
+        c_vocab_size: int,
+        u_vocab_size: int,
         hidden_dim: int,
         num_heads: int,
         num_layers: int,
         dim_feedforward: int,
         dropout: float,
-        syntax_gate: bool,
         pad_index: int = 0,
     ):
         super(TransformerEncoderSyntax, self).__init__()
         self.embedding = nn.Embedding(vocab_size, hidden_dim, padding_idx=pad_index)
         self.positional_embedding = PositionalEncoding(hidden_dim)
-        self.syntax_encoding = SimpleSyntaxPositionalEncoding()
-        if syntax_gate:
-            self.syntax_gate = HighwayGate(hidden_dim)
+        self.syntax_encoding = SimpleSyntaxPositionalEncoding(d_vocab_size=d_vocab_size,
+                                                              c_vocab_size=c_vocab_size,
+                                                              u_vocab_size=u_vocab_size)
         encoder_layers = nn.TransformerEncoderLayer(d_model=hidden_dim,
                                                     nhead=num_heads,
                                                     dim_feedforward=dim_feedforward,
@@ -120,9 +112,6 @@ class TransformerEncoderSyntax(nn.Module):
         src_embds = self.embedding(src) * math.sqrt(self.d_model)
         src_positional = self.positional_embedding(src_embds)
         src = self.syntax_encoding(src_positional, d, c, u)
-        if hasattr(self, 'syntax_gate'):
-            src = self.syntax_gate(src_positional, src)
-
         # permute batch_size and seq_len
         src = src.permute(1, 0, 2)
         output = self.encoder(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)
