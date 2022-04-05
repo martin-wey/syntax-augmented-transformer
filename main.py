@@ -17,7 +17,7 @@ from models.encoder_decoder import TransformerEncoder, TransformerEncoderSyntax,
 from data.utils import LANGUAGE_GRAMMARS
 from utils import convert_to_ids
 from train import train_baseline, train_syntax_augmented_trans
-from evaluate import test_baseline, test_syntax_augmented_trans
+from evaluate import test_baseline, test_syntax_augmented_trans, compute_bleu
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +123,10 @@ def main(cfg: omegaconf.DictConfig):
                 tokenizer=tokenizer,
                 test_dataset=test_dataset
             )
+
+    if cfg.run.run_bleu:
+        compute_bleu(os.path.join(cfg.run.base_path, cfg.model.checkpoint, 'predictions.pkl'),
+                     os.path.join(cfg.run.base_path, cfg.model.checkpoint, 'test.pkl'))
 
 
 if __name__ == '__main__':

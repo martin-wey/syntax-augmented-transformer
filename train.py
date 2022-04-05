@@ -5,10 +5,6 @@ import wandb
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
 from tqdm import tqdm
-from tokenizers import models, Tokenizer, trainers, decoders, normalizers
-from tokenizers.pre_tokenizers import PreTokenizer, Whitespace
-from tokenizers.processors import TemplateProcessing
-from tokenizers.normalizers import Lowercase, StripAccents
 
 from utils import get_random_sampler, num_trainable_parameters
 from collators import collator_fn, collator_fn_dcu
@@ -94,13 +90,12 @@ def train_baseline(
         model.train()
 
         if eval_loss < best_eval_loss:
-            if cfg.mode != 'dev':
-                logger.info('-' * 100)
-                logger.info('Saving model checkpoint')
-                logger.info('-' * 100)
-                model_to_save = model.module if hasattr(model, 'module') else model
-                torch.save(model_to_save.state_dict(), 'pytorch_model.bin')
-                logger.info(f'New best model saved!')
+            logger.info('-' * 100)
+            logger.info('Saving model checkpoint')
+            logger.info('-' * 100)
+            model_to_save = model.module if hasattr(model, 'module') else model
+            torch.save(model_to_save.state_dict(), 'pytorch_model.bin')
+            logger.info(f'New best model saved!')
             patience_count = 0
             best_eval_loss = eval_loss
             if cfg.use_wandb:
@@ -225,13 +220,12 @@ def train_syntax_augmented_trans(
         model.train()
 
         if eval_loss < best_eval_loss:
-            if cfg.mode != 'dev':
-                logger.info('-' * 100)
-                logger.info('Saving model checkpoint')
-                logger.info('-' * 100)
-                model_to_save = model.module if hasattr(model, 'module') else model
-                torch.save(model_to_save.state_dict(), 'pytorch_model.bin')
-                logger.info(f'New best model saved!')
+            logger.info('-' * 100)
+            logger.info('Saving model checkpoint')
+            logger.info('-' * 100)
+            model_to_save = model.module if hasattr(model, 'module') else model
+            torch.save(model_to_save.state_dict(), 'pytorch_model.bin')
+            logger.info(f'New best model saved!')
             patience_count = 0
             best_eval_loss = eval_loss
             if cfg.use_wandb:
@@ -276,57 +270,3 @@ def evaluate_syntax_augmented_trans(
                              tgt_shifted.reshape(-1).to(cfg.device))
             eval_loss += loss.item()
     return eval_loss / len(valid_dataloader)
-
-
-def train_code_tokenizer(cfg, train_dataset, parser):
-    #Normalization + pre-tokenization
-    print(cfg.run.dataset_lang)
-    pretokenizer = PreTokenizer.custom(CodePreTokenizer(parser, lang=cfg.run.dataset_lang))
-    tokenizer = Tokenizer(models.WordPiece(unl_token="[UNK]"))
-    tokenizer.pre_tokenizer = pretokenizer
-    special_tokens = ["[PAD]", "[UNK]"]
-    #Model
-    trainer = trainers.WordPieceTrainer(vocab_size=50000, special_tokens=special_tokens)
-
-    logger.info('Starting training')
-    tokenizer.train_from_iterator(train_dataset, trainer=trainer)
-    tokenizer.enable_padding(pad_id=tokenizer.token_to_id("[PAD]"), pad_token="[PAD]")
-    #postprocessing + decoding
-    tokenizer.decoder = decoders.WordPiece()
-
-    example_code = """def maximum(a, b):
-    # return the maximum of two numbers
-    if a > b:
-        return a
-    return b"""
-    encoded_seq = tokenizer.encode(example_code)
-    logger.info(f"Pretokenized: {tokenizer.pre_tokenizer.pre_tokenize_str(example_code)}")
-    logger.info(f"Encoded: {encoded_seq.ids}")
-    logger.info(f"Decoded: {tokenizer.decode(encoded_seq.ids)}")
-
-    logger.info('Tokenizer trained, saving it')
-    save_code_tokenizer(tokenizer, 'tokenizer_code.json')
-
-
-def train_nl_tokenizer(train_dataset):
-    #Model
-    tokenizer = Tokenizer(models.BPE())
-    # Normalization + pre-tokenization
-    tokenizer.pre_tokenizer = Whitespace()
-    tokenizer.normalizer = normalizers.Sequence([Lowercase(), StripAccents()])
-    trainer = trainers.BpeTrainer(vocab_size=50000, special_tokens=["<pad>", "<s>", "</s>"])
-    tokenizer.train_from_iterator(train_dataset, trainer=trainer)
-    tokenizer.enable_padding(pad_id=tokenizer.token_to_id("<pad>"), pad_token="<pad>")
-    # postprocessing + decoding
-    tokenizer.post_processor = TemplateProcessing(
-        single="<s> $A </s>",
-        special_tokens=[
-            ("<s>", tokenizer.token_to_id("<s>")),
-            ("</s>", tokenizer.token_to_id("</s>")),
-        ],
-    )
-    #tokenizer.decoder = decoders.BPEDecoder()
-    encoded_seq = tokenizer.encode("Hello world!")
-    logger.info(f"Encoded: {encoded_seq.ids}")
-    logger.info(f"Decoded: {tokenizer.decode(encoded_seq.ids)}")
-    tokenizer.save('tokenizer_nl.json')
