@@ -1,24 +1,8 @@
 import torch
 
-import networkx as nx
-
-from data.code2ast import code2ast, get_tokens_ast, has_error
+from data.code2ast import code2ast, get_tokens_ast
 from data.binary_tree import ast2binary, tree_to_distance
-from data.utils import get_c_subword, get_d_subword, get_u_subword, preprocess_code
-
-
-def filter_sample(code, lang, parser):
-    try:
-        code = preprocess_code(code, lang)
-        G = code2ast(code=code, parser=parser)
-        assert nx.is_tree(nx.Graph(G))
-        assert nx.is_connected(nx.Graph(G))
-    except:
-        return False
-    if has_error(G):
-        return False
-
-    return True
+from data.utils import get_c_subword, get_d_subword, get_u_subword
 
 
 def convert_sample_to_features(code, parser):

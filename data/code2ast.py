@@ -72,7 +72,7 @@ def get_tokens_dep(T, code):
 
 
 def solve_string_problems(G):
-    strings = [n for n in G if G.nodes[n]['type'] == 'string'
+    strings = [n for n in G if (G.nodes[n]['type'] == 'string' or ('string_literal' in G.nodes[n]['type']))
                and not G.nodes[n]['is_terminal']]
     for n in strings:
         if n not in G:
@@ -97,6 +97,21 @@ def code2ast(code, parser):
     get_graph_from_tree(tree.root_node, G, 0)
     solve_string_problems(G)
     return G
+
+
+def remove_comments_ast(G, code):
+    start_end_comments = [(G.nodes[n]['start'], G.nodes[n]['end']) for n in G if G.nodes[n]['type'] == 'comment']
+    code_bytes = bytes(code, "utf8")
+    new_bytes = []
+    for j, b in enumerate(code_bytes):
+        to_add = True
+        for s, e in start_end_comments:
+            if e > j >= s:
+                to_add = False
+        if to_add:
+            new_bytes.append(code_bytes[j:j+1])
+    new_bytes = b''.join(new_bytes)
+    return new_bytes.decode("utf-8")
 
 
 # it adds dependency labels between non-terminals to the previous obtained ast graph

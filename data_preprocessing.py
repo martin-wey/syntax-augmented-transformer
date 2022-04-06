@@ -4,14 +4,30 @@ import logging
 import sys
 import pickle
 
+import networkx as nx
 from tree_sitter import Parser
 from datasets import load_dataset
 
-from collators import filter_sample, convert_sample_to_features
+from collators import convert_sample_to_features
+from data.code2ast import code2ast, has_error
 from data.utils import LANGUAGE_GRAMMARS, preprocess_code
 from utils import get_non_terminals_labels
 
 logger = logging.getLogger(__name__)
+
+
+def filter_sample(code, lang, parser):
+    try:
+        code = preprocess_code(code, lang)
+        G = code2ast(code=code, parser=parser)
+        assert nx.is_tree(nx.Graph(G))
+        assert nx.is_connected(nx.Graph(G))
+    except:
+        return False
+    if has_error(G):
+        return False
+
+    return True
 
 
 if __name__ == '__main__':

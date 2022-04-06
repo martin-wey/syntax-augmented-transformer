@@ -4,19 +4,13 @@ import tokenize
 
 from tree_sitter import Language
 
-LANGUAGES = (
-    'python',
-    'java',
-    'ruby',
-    'javascript',
-    'go',
-    'php'
-)
-
 LANGUAGE_GRAMMARS = {
     'python': Language('grammars/languages.so', 'python'),
     'javascript': Language('grammars/languages.so', 'javascript'),
     'go': Language('grammars/languages.so', 'go'),
+    'php': Language('grammars/languages.so', 'php'),
+    'java': Language('grammars/languages.so', 'java'),
+    'ruby': Language('grammars/languages.so', 'ruby'),
 }
 
 
@@ -84,6 +78,11 @@ def preprocess_code(code, lang):
         return remove_comments_and_docstrings_java_js(code)
     elif lang == 'php':
         return remove_comments_php(code)
+    elif lang == 'java':
+        code = 'public class Main {\n' + code + '\n}'
+        return remove_comments_and_docstrings_java_js(code)
+    elif lang == 'ruby':
+        return code
 
 
 def get_u_subword(u, mapping):
