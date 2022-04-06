@@ -39,10 +39,17 @@ class TransformerEncoder(nn.Module):
         dim_feedforward: int,
         dropout: float,
         pad_index: int = 0,
+        d_vocab_size: int = -1,
+        c_vocab_size: int = -1,
+        u_vocab_size: int = -1,
     ):
         super(TransformerEncoder, self).__init__()
         self.embedding = nn.Embedding(vocab_size, hidden_dim, padding_idx=pad_index)
         self.positional_embedding = PositionalEncoding(hidden_dim)
+        if d_vocab_size > -1:
+            self.syntax_encoding = SimpleSyntaxPositionalEncoding(d_vocab_size=d_vocab_size,
+                                                                  c_vocab_size=c_vocab_size,
+                                                                  u_vocab_size=u_vocab_size)
         encoder_layers = nn.TransformerEncoderLayer(d_model=hidden_dim,
                                                     nhead=num_heads,
                                                     dim_feedforward=dim_feedforward,
@@ -61,57 +68,11 @@ class TransformerEncoder(nn.Module):
         tgt_embds = self.positional_embedding(tgt_embds)
         return tgt_embds.permute(1, 0, 2)
 
-    def forward(self, src: Tensor, src_mask: Tensor, src_key_padding_mask: Tensor) -> Tensor:
-        src = self.embedding(src) * math.sqrt(self.d_model)
-        src = self.positional_embedding(src)
-        # permute batch_size and seq_len
-        src = src.permute(1, 0, 2)
-        output = self.encoder(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)
-        return output
-
-
-class TransformerEncoderSyntax(nn.Module):
-    def __init__(
-        self,
-        vocab_size: int,
-        d_vocab_size: int,
-        c_vocab_size: int,
-        u_vocab_size: int,
-        hidden_dim: int,
-        num_heads: int,
-        num_layers: int,
-        dim_feedforward: int,
-        dropout: float,
-        pad_index: int = 0,
-    ):
-        super(TransformerEncoderSyntax, self).__init__()
-        self.embedding = nn.Embedding(vocab_size, hidden_dim, padding_idx=pad_index)
-        self.positional_embedding = PositionalEncoding(hidden_dim)
-        self.syntax_encoding = SimpleSyntaxPositionalEncoding(d_vocab_size=d_vocab_size,
-                                                              c_vocab_size=c_vocab_size,
-                                                              u_vocab_size=u_vocab_size)
-        encoder_layers = nn.TransformerEncoderLayer(d_model=hidden_dim,
-                                                    nhead=num_heads,
-                                                    dim_feedforward=dim_feedforward,
-                                                    dropout=dropout)
-        self.encoder = nn.TransformerEncoder(encoder_layers, num_layers=num_layers)
-        self.d_model = hidden_dim
-
-        self.init_weights()
-
-    def init_weights(self):
-        initrange = 0.1
-        nn.init.uniform_(self.embedding.weight, -initrange, initrange)
-
-    def get_embeddings(self, inputs):
-        tgt_embds = self.embedding(inputs) * math.sqrt(self.d_model)
-        tgt_embds = self.positional_embedding(tgt_embds)
-        return tgt_embds.permute(1, 0, 2)
-
-    def forward(self, src: Tensor, src_mask: Tensor, src_key_padding_mask: Tensor, d: Tensor, c: Tensor, u: Tensor) -> Tensor:
+    def forward(self, src, src_mask, src_key_padding_mask, d=None, c=None, u=None):
         src_embds = self.embedding(src) * math.sqrt(self.d_model)
         src_positional = self.positional_embedding(src_embds)
-        src = self.syntax_encoding(src_positional, d, c, u)
+        if hasattr(self, 'syntax_encoding'):
+            src = self.syntax_encoding(src_positional, d, c, u)
         # permute batch_size and seq_len
         src = src.permute(1, 0, 2)
         output = self.encoder(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)

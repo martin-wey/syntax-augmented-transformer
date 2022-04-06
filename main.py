@@ -12,8 +12,7 @@ from transformers import RobertaTokenizerFast
 from datasets import load_from_disk
 from tree_sitter import Parser
 
-from models.encoder_decoder import TransformerEncoder, TransformerEncoderSyntax, \
-    TransformerDecoder, TransformerEncoderDecoder
+from models.encoder_decoder import TransformerEncoder, TransformerDecoder, TransformerEncoderDecoder
 from data.utils import LANGUAGE_GRAMMARS
 from utils import convert_to_ids
 from train import train_seq2seq
@@ -23,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 MODEL_CLASSES = {
     'baseline_seq2seq': (TransformerEncoder, TransformerDecoder, RobertaTokenizerFast),
-    'syntax_augmented_seq2seq': (TransformerEncoderSyntax, TransformerDecoder, RobertaTokenizerFast)
+    'syntax_augmented_seq2seq': (TransformerEncoder, TransformerDecoder, RobertaTokenizerFast)
 }
 
 
