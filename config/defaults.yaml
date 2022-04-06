@@ -2,15 +2,13 @@
 defaults:
   - _self_
   - run: default
-  - model: baseline_trans
+  - model: baseline_seq2seq
   - wandb: default
   - hydra: default
 
 model:
   tokenizer_name_or_path: microsoft/codebert-base
   checkpoint: null
-  max_input_length: 256
-  max_target_length: 128
 
 device: cuda
 parallel: False

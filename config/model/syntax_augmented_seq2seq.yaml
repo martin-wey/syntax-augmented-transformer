@@ -1,5 +1,10 @@
 ---
-config: syntax_augmented_trans
+config: syntax_augmented_seq2seq  # corresponds to a key in MODEL_CLASSES (see main.py)
+architecture: seq2seq
+type: syntax-augmented
+
+max_input_length: 256
+max_target_length: 128
 
 encoder_args:
   hidden_dim: 768

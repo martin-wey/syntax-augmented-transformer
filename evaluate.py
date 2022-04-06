@@ -2,12 +2,15 @@ import os
 import logging
 import pickle
 
+import omegaconf
 import torch
+from transformers import RobertaTokenizerFast
+from datasets import Dataset
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from collators import collator_fn, collator_fn_dcu
-from models.encoder_decoder import create_mask, Beam
+from collators import collator_fn_seq2seq, collator_fn_dcu_seq2seq
+from models.encoder_decoder import create_mask, Beam, TransformerEncoderDecoder
 import models.bleu as bleu
 
 logger = logging.getLogger(__name__)
@@ -64,7 +67,13 @@ def compute_beam_search_batch(encoder_output, all_input_ids, src_mask, tokenizer
     return batch_list
 
 
-def test_baseline(cfg, model, tokenizer, test_dataset):
+def test_seq2seq(
+    cfg: omegaconf.DictConfig,
+    model: TransformerEncoderDecoder,
+    tokenizer: RobertaTokenizerFast,
+    test_dataset: Dataset
+):
+    collator_fn = collator_fn_seq2seq if cfg.model.type == 'baseline' else collator_fn_dcu_seq2seq
     test_dataloader = DataLoader(dataset=test_dataset,
                                  batch_size=cfg.run.valid_batch_size,
                                  collate_fn=lambda batch: collator_fn(batch, tokenizer, cfg),
@@ -77,31 +86,16 @@ def test_baseline(cfg, model, tokenizer, test_dataset):
         for step, batch in enumerate(tqdm(test_dataloader,
                                           bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}',
                                           desc='Iteration')):
-            all_input_ids, src_padding_mask, all_target_ids, tgt_padding_mask = batch
-            src_mask, _ = create_mask(all_input_ids.to(cfg.device), None)
-            encoder_output = model.encoder(all_input_ids.to(cfg.device), src_mask, src_padding_mask.to(cfg.device))
-            batch_list = compute_beam_search_batch(encoder_output, all_input_ids, src_mask, tokenizer, model)
-            predictions += batch_list
-    save_predictions(predictions, test_dataset, cfg)
+            if cfg.model.type == 'baseline':
+                all_input_ids, src_padding_mask, all_target_ids, tgt_padding_mask = batch
+                src_mask, _ = create_mask(all_input_ids.to(cfg.device), None)
+                encoder_output = model.encoder(all_input_ids.to(cfg.device), src_mask, src_padding_mask.to(cfg.device))
+            else:
+                all_input_ids, src_padding_mask, all_target_ids, tgt_padding_mask, ds, cs, us = batch
+                src_mask, _ = create_mask(all_input_ids.to(cfg.device), None)
+                encoder_output = model.encoder(all_input_ids.to(cfg.device), src_mask, src_padding_mask.to(cfg.device),
+                                               ds.to(cfg.device), cs.to(cfg.device), us.to(cfg.device))
 
-
-def test_syntax_augmented_trans(cfg, model, tokenizer, test_dataset):
-    test_dataloader = DataLoader(dataset=test_dataset,
-                                 batch_size=cfg.run.valid_batch_size,
-                                 collate_fn=lambda batch: collator_fn_dcu(batch, tokenizer, cfg),
-                                 shuffle=False,
-                                 pin_memory=True,
-                                 num_workers=8)
-    model.eval()
-    predictions = []
-    with torch.no_grad():
-        for step, batch in enumerate(tqdm(test_dataloader,
-                                          bar_format='{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}',
-                                          desc='Iteration')):
-            all_input_ids, src_padding_mask, all_target_ids, tgt_padding_mask, ds, cs, us = batch
-            src_mask, _ = create_mask(all_input_ids.to(cfg.device), None)
-            encoder_output = model.encoder(all_input_ids.to(cfg.device), src_mask, src_padding_mask.to(cfg.device),
-                                           ds.to(cfg.device), cs.to(cfg.device), us.to(cfg.device))
             batch_list = compute_beam_search_batch(encoder_output, all_input_ids, src_mask, tokenizer, model)
             predictions += batch_list
     save_predictions(predictions, test_dataset, cfg)

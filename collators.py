@@ -39,7 +39,7 @@ def match_tokenized_to_untokenized_roberta(untokenized_sent, tokenizer):
     return flat_tokenized, mapping
 
 
-def collator_fn(batch, tokenizer, cfg):
+def collator_fn_seq2seq(batch, tokenizer, cfg):
     code_tokens_batch = [e['code'] for e in batch]
     docstrings_batch = [e['docstring'] for e in batch]
 
@@ -67,7 +67,7 @@ def collator_fn(batch, tokenizer, cfg):
     return all_input_ids, src_padding_mask, all_target_ids, tgt_padding_mask
 
 
-def collator_fn_dcu(batch, tokenizer, cfg):
+def collator_fn_dcu_seq2seq(batch, tokenizer, cfg):
     code_tokens_batch = [b['code'] for b in batch]
     docstrings_batch = [e['docstring'] for e in batch]
     cs = [b['c'] for b in batch]

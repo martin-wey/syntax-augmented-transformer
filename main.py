@@ -16,14 +16,14 @@ from models.encoder_decoder import TransformerEncoder, TransformerEncoderSyntax,
     TransformerDecoder, TransformerEncoderDecoder
 from data.utils import LANGUAGE_GRAMMARS
 from utils import convert_to_ids
-from train import train_baseline, train_syntax_augmented_trans
-from evaluate import test_baseline, test_syntax_augmented_trans, compute_bleu
+from train import train_seq2seq
+from evaluate import test_seq2seq, compute_bleu
 
 logger = logging.getLogger(__name__)
 
 MODEL_CLASSES = {
-    'baseline_trans': (TransformerEncoder, TransformerDecoder, RobertaTokenizerFast),
-    'syntax_augmented_trans': (TransformerEncoderSyntax, TransformerDecoder, RobertaTokenizerFast)
+    'baseline_seq2seq': (TransformerEncoder, TransformerDecoder, RobertaTokenizerFast),
+    'syntax_augmented_seq2seq': (TransformerEncoderSyntax, TransformerDecoder, RobertaTokenizerFast)
 }
 
 
@@ -54,7 +54,8 @@ def main(cfg: omegaconf.DictConfig):
         valid_dataset = load_from_disk(f'{dataset_path}/valid')
         test_dataset = load_from_disk(f'{dataset_path}/test')
 
-        if cfg.model.config in ['syntax_augmented_trans']:
+        if cfg.model.type == 'syntax-augmented':
+            # load AST data
             dcu_labels = pickle.load(open(f'{dataset_path}/dcu_labels.pkl', 'rb'))
             train_dataset = train_dataset.map(lambda e: convert_to_ids(e['c'], 'c', dcu_labels['labels_to_ids_c']), num_proc=4)
             valid_dataset = valid_dataset.map(lambda e: convert_to_ids(e['c'], 'c', dcu_labels['labels_to_ids_c']), num_proc=4)
@@ -70,17 +71,22 @@ def main(cfg: omegaconf.DictConfig):
         if cfg.model.config not in MODEL_CLASSES:
             raise ValueError('Please specify a valid model configuration.')
 
-        logger.info('Loading encoder-decoder model.')
-        encoder_class, decoder_class, tokenizer_class = MODEL_CLASSES[cfg.model.config]
-        tokenizer = tokenizer_class.from_pretrained(cfg.model.tokenizer_name_or_path)
-        encoder = encoder_class(vocab_size=len(tokenizer),
-                                pad_index=tokenizer.pad_token_id,
-                                **cfg.model.encoder_args)
-        decoder = decoder_class(**cfg.model.decoder_args)
-        model = TransformerEncoderDecoder(encoder=encoder,
-                                          decoder=decoder,
-                                          d_model=cfg.model.encoder_args.hidden_dim,
-                                          vocab_size=len(tokenizer))
+        if cfg.model.architecture == 'seq2seq':
+            logger.info('Loading encoder-decoder model.')
+            encoder_class, decoder_class, tokenizer_class = MODEL_CLASSES[cfg.model.config]
+            tokenizer = tokenizer_class.from_pretrained(cfg.model.tokenizer_name_or_path)
+            encoder = encoder_class(vocab_size=len(tokenizer),
+                                    pad_index=tokenizer.pad_token_id,
+                                    **cfg.model.encoder_args)
+            decoder = decoder_class(**cfg.model.decoder_args)
+            model = TransformerEncoderDecoder(encoder=encoder,
+                                              decoder=decoder,
+                                              d_model=cfg.model.encoder_args.hidden_dim,
+                                              vocab_size=len(tokenizer))
+        elif cfg.model.architecture == 'encoder':
+            # @todo: load single encoder for code search
+            pass
+
         if cfg.model.checkpoint is not None:
             logger.info('Restoring model checkpoint.')
             checkpoint = torch.load(os.path.join(cfg.run.base_path, cfg.model.checkpoint, 'pytorch_model.bin'))
@@ -91,39 +97,29 @@ def main(cfg: omegaconf.DictConfig):
         model.to(cfg.device)
 
     if cfg.run.do_train:
-        if cfg.model.config == 'baseline_trans':
-            train_baseline(
+        if cfg.model.architecture == 'seq2seq':
+            train_seq2seq(
                 cfg=cfg,
                 model=model,
                 tokenizer=tokenizer,
                 train_dataset=train_dataset,
                 valid_dataset=valid_dataset
             )
-        elif cfg.model.config in ['syntax_augmented_trans']:
-            train_syntax_augmented_trans(
-                cfg=cfg,
-                model=model,
-                tokenizer=tokenizer,
-                train_dataset=train_dataset,
-                valid_dataset=valid_dataset
-            )
+        elif cfg.model.architecture == 'encoder':
+            pass
 
     if cfg.run.do_test:
-        if cfg.model.config == 'baseline_trans':
-            test_baseline(
+        if cfg.model.architecture == 'seq2seq':
+            test_seq2seq(
                 cfg=cfg,
                 model=model,
                 tokenizer=tokenizer,
                 test_dataset=test_dataset
             )
-        elif cfg.model.config in ['syntax_augmented_trans']:
-            test_syntax_augmented_trans(
-                cfg=cfg,
-                model=model,
-                tokenizer=tokenizer,
-                test_dataset=test_dataset
-            )
+        elif cfg.model.architecture == 'encoder':
+            pass
 
+    # @todo: externalize in a bash script
     if cfg.run.run_bleu:
         compute_bleu(os.path.join(cfg.run.base_path, cfg.model.checkpoint, 'predictions.pkl'),
                      os.path.join(cfg.run.base_path, cfg.model.checkpoint, 'test.pkl'))
