@@ -69,10 +69,10 @@ class TransformerEncoder(nn.Module):
         return tgt_embds.permute(1, 0, 2)
 
     def forward(self, src, src_mask, src_key_padding_mask, d=None, c=None, u=None):
-        src_embds = self.embedding(src) * math.sqrt(self.d_model)
-        src_positional = self.positional_embedding(src_embds)
+        src = self.embedding(src) * math.sqrt(self.d_model)
+        src = self.positional_embedding(src)
         if hasattr(self, 'syntax_encoding'):
-            src = self.syntax_encoding(src_positional, d, c, u)
+            src = self.syntax_encoding(src, d, c, u)
         # permute batch_size and seq_len
         src = src.permute(1, 0, 2)
         output = self.encoder(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)
